@@ -24,8 +24,20 @@ def preprocess(x, y):  # function for flattening out feature matrix
 
 train_data, val_data = train_data.map(preprocess), val_data.map(preprocess) # using preprocess funtion to flatten out data matrixes
 
-x = tf.linspace(-2, 2, 201) # ReLU(X)
-x = tf.cast(x, tf.float32)
+# activation functions
+reLUls = tf.linspace(-2, 2, 15)  # ReLU(X)
+reLUls = tf.cast(reLUls, tf.float32)
+reLU = tf.nn.relu(reLUls)
+# plt.plot(reLUls, reLU)
 
+softmaxls = tf.linspace(-4, 4, 15)  # Softmax
+softmaxls = tf.cast(softmaxls, tf.float32)
+softmax = tf.nn.softmax(softmaxls, axis=0)
+# plt.plot(softmaxls, softmax)
+
+sigmoidls = tf.linspace(-5, 5, 15)  # Sigmoid
+sigmoidls = tf.cast(sigmoidls, tf.float32)
+sigmoid = tf.nn.sigmoid(sigmoidls)
+# plt.plot(sigmoidls, sigmoid)
 
 plt.show()
