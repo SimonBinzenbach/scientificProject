@@ -25,7 +25,7 @@ def preprocess(x, y):  # function for flattening out feature matrix
 train_data, val_data = train_data.map(preprocess), val_data.map(
     preprocess)  # using preprocess funtion to flatten out data matrices
 
-# activation functions
+# Plotting
 reLU_ls = tf.linspace(-2, 2, 15)  # ReLU(X)
 reLU_ls = tf.cast(reLU_ls, tf.float32)
 reLU = tf.nn.relu(reLU_ls)
@@ -45,6 +45,17 @@ tanh_ls = tf.linspace(-5, 5, 15)  # Tanh
 tanh_ls = tf.cast(tanh_ls, tf.float32)
 tanh = tf.nn.tanh(tanh_ls)
 # plt.plot(tanh_ls, tanh)
+
+
+def plot_metrics(train_metric, val_metric, metric_type):
+    # Visualize metrics vs training Epochs
+    plt.figure()
+    plt.plot(range(len(train_metric)), train_metric, label=f"Training {metric_type}")
+    plt.plot(range(len(val_metric)), val_metric, label=f"Validation {metric_type}")
+    plt.xlabel("Epochs")
+    plt.ylabel(metric_type)
+    plt.legend()
+    plt.title(f"{metric_type} vs Training epochs");
 
 
 # MLP Initialization stuff
@@ -143,5 +154,58 @@ mlp_model = MLP([
 
 
 # Training Loop
+def train_step(x_batch, y_batch, loss, acc, model, optimizer):  # Model Update
+    with tf.GradientTape() as tape:
+        y_pred = model(x_batch)
+        batch_loss = loss(y_pred, y_batch)
+    batch_acc = acc(y_pred, y_batch)
+    grads = tape.gradient(batch_loss, model.variables)
+    optimizer.apply_gradients(grads, model.variables)
+    return batch_loss, batch_acc
+
+
+def val_step(x_batch, y_batch, loss, acc, model):  # Evaluate Model
+    y_pred = model(x_batch)
+    batch_loss = loss(y_pred, y_batch)
+    batch_acc = acc(y_pred, y_batch)
+    return batch_loss, batch_acc
+
+
+def train_model(mlp, train_data, val_data, loss, acc, optimizer, epochs):  # Training
+    train_losses, train_accs = [], []
+    val_losses, val_accs = [], []
+
+    for epoch in range(epochs):
+        batch_losses_train, batch_accs_train = [], []
+        batch_losses_val, batch_accs_val = [], []
+
+        for x_batch, y_batch in train_data:
+            batch_loss, batch_acc = train_step(x_batch, y_batch, loss, acc, mlp, optimizer)
+            batch_losses_train.append(batch_loss)
+            batch_accs_train.append(batch_acc)
+
+        for x_batch, y_batch in val_data:
+            batch_loss, batch_acc = val_step(x_batch, y_batch, loss, acc, mlp)
+            batch_losses_val.append(batch_loss)
+            batch_accs_val.append(batch_acc)
+
+        train_loss, train_acc = tf.reduce_mean(batch_losses_train), tf.reduce_mean(batch_accs_train)
+        val_loss, val_acc = tf.reduce_mean(batch_losses_val), tf.reduce_mean(batch_accs_val)
+        train_losses.append(train_loss)
+        train_accs.append(train_acc)
+        val_losses.append(val_loss)
+        val_accs.append(val_acc)
+        print(f"Epoch: {epoch}")
+        print(f"Training loss: {train_loss:.3f}, Training accuracy: {train_acc:.3f}")
+        print(f"Validation loss: {val_loss:.3f}, Validation accuracy: {val_acc:.3f}")
+    return train_losses, train_accs, val_losses, val_accs
+
+
+train_losses, train_accs, val_losses, val_accs = train_model(mlp_model, train_data, val_data,
+                                                             loss=cross_entropy_loss, acc=accuracy,
+                                                             optimizer=Adam(), epochs=10)
+
+plot_metrics(train_losses, val_losses, "cross entropy loss")
+plot_metrics(train_accs, val_accs, "accuracy")
 
 plt.show()
