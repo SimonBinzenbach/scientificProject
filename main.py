@@ -25,19 +25,24 @@ def preprocess(x, y):  # function for flattening out feature matrix
 train_data, val_data = train_data.map(preprocess), val_data.map(preprocess) # using preprocess funtion to flatten out data matrixes
 
 # activation functions
-reLUls = tf.linspace(-2, 2, 15)  # ReLU(X)
-reLUls = tf.cast(reLUls, tf.float32)
-reLU = tf.nn.relu(reLUls)
+reLU_ls = tf.linspace(-2, 2, 15)  # ReLU(X)
+reLU_ls = tf.cast(reLU_ls, tf.float32)
+reLU = tf.nn.relu(reLU_ls)
 # plt.plot(reLUls, reLU)
 
-softmaxls = tf.linspace(-4, 4, 15)  # Softmax
-softmaxls = tf.cast(softmaxls, tf.float32)
-softmax = tf.nn.softmax(softmaxls, axis=0)
+softmax_ls = tf.linspace(-4, 4, 15)  # Softmax
+softmax_ls = tf.cast(softmax_ls, tf.float32)
+softmax = tf.nn.softmax(softmax_ls, axis=0)
 # plt.plot(softmaxls, softmax)
 
-sigmoidls = tf.linspace(-5, 5, 15)  # Sigmoid
-sigmoidls = tf.cast(sigmoidls, tf.float32)
-sigmoid = tf.nn.sigmoid(sigmoidls)
+sigmoid_ls = tf.linspace(-5, 5, 15)  # Sigmoid
+sigmoid_ls = tf.cast(sigmoid_ls, tf.float32)
+sigmoid = tf.nn.sigmoid(sigmoid_ls)
 # plt.plot(sigmoidls, sigmoid)
+
+tanh_ls = tf.linspace(-5, 5, 15)  # Tanh
+tanh_ls = tf.cast(tanh_ls, tf.float32)
+tanh = tf.nn.tanh(tanh_ls)
+# plt.plot(tanh_ls, tanh)
 
 plt.show()
