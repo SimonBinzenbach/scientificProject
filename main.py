@@ -44,6 +44,8 @@ sigmoid = tf.nn.sigmoid(sigmoid_ls)
 tanh_ls = tf.linspace(-5, 5, 15)  # Tanh
 tanh_ls = tf.cast(tanh_ls, tf.float32)
 tanh = tf.nn.tanh(tanh_ls)
+
+
 # plt.plot(tanh_ls, tanh)
 
 
@@ -64,6 +66,17 @@ class DenseLayer(tf.Module):
             self.built = True
         z = tf.add(tf.matmul(x, self.w), self.b)
         return self.activation(z)
+
+
+class MLP(tf.Module):
+    def __init__(self, layers):
+        self.layers = layers
+
+    @tf.function
+    def __call__(self, x, preds=False):
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 plt.show()
