@@ -22,7 +22,7 @@ def preprocess(x, y):  # function for flattening out feature matrix
     return x, y
 
 
-# Plotting
+# Activation Function showcases
 reLU_ls = tf.linspace(-2, 2, 15)  # ReLU(X)
 reLU_ls = tf.cast(reLU_ls, tf.float32)
 reLU = tf.nn.relu(reLU_ls)
@@ -229,7 +229,7 @@ mlp_model = MLP([
 # Train Loop
 train_losses, train_accs, val_losses, val_accs = train_model(mlp_model, train_data, val_data,
                                                              loss=cross_entropy_loss, acc=accuracy,
-                                                             optimizer=Adam(), epochs=40)
+                                                             optimizer=Adam(), epochs=7)
 # Init Export Module
 mlp_model_export = ExportModule(model=mlp_model,
                                 preprocess=preprocess_test,
