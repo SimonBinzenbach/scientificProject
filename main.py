@@ -47,7 +47,7 @@ def plot_metrics(train_metric, val_metric, metric_type):  # Visualize metrics vs
     plt.xlabel("Epochs")
     plt.ylabel(metric_type)
     plt.legend()
-    plt.title(f"{metric_type} vs Training epochs");
+    plt.title(f"{metric_type} vs Training epochs")
 
 
 # MLP Initialization stuff
