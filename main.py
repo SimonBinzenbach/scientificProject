@@ -22,33 +22,25 @@ def preprocess(x, y):  # function for flattening out feature matrix
     return x, y
 
 
-train_data, val_data = train_data.map(preprocess), val_data.map(
-    preprocess)  # using preprocess funtion to flatten out data matrices
-
 # Plotting
 reLU_ls = tf.linspace(-2, 2, 15)  # ReLU(X)
 reLU_ls = tf.cast(reLU_ls, tf.float32)
 reLU = tf.nn.relu(reLU_ls)
-# plt.plot(reLU_ls, reLU)
 
 softmax_ls = tf.linspace(-4, 4, 15)  # Softmax
 softmax_ls = tf.cast(softmax_ls, tf.float32)
 softmax = tf.nn.softmax(softmax_ls, axis=0)
-# plt.plot(softmax_ls, softmax)
 
 sigmoid_ls = tf.linspace(-5, 5, 15)  # Sigmoid
 sigmoid_ls = tf.cast(sigmoid_ls, tf.float32)
 sigmoid = tf.nn.sigmoid(sigmoid_ls)
-# plt.plot(sigmoid_ls, sigmoid)
 
 tanh_ls = tf.linspace(-5, 5, 15)  # Tanh
 tanh_ls = tf.cast(tanh_ls, tf.float32)
 tanh = tf.nn.tanh(tanh_ls)
-# plt.plot(tanh_ls, tanh)
 
 
-def plot_metrics(train_metric, val_metric, metric_type):
-    # Visualize metrics vs training Epochs
+def plot_metrics(train_metric, val_metric, metric_type):  # Visualize metrics vs training Epochs
     plt.figure()
     plt.plot(range(len(train_metric)), train_metric, label=f"Training {metric_type}")
     plt.plot(range(len(val_metric)), val_metric, label=f"Validation {metric_type}")
@@ -143,17 +135,7 @@ def accuracy(y_pred, y):  # accuracy function
     return tf.reduce_mean(tf.cast(is_equal, tf.float32))
 
 
-# Initialization of MLP
-hidden_layer_1_size = 700
-hidden_layer_2_size = 500
-output_size = 10
-mlp_model = MLP([
-    DenseLayer(out_dim=hidden_layer_1_size, activation=tf.nn.relu),
-    DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.relu),
-    DenseLayer(out_dim=output_size)])
-
-
-# Training Loop
+# Training Functions
 def train_step(x_batch, y_batch, loss, acc, model, optimizer):  # Model Update
     with tf.GradientTape() as tape:
         y_pred = model(x_batch)
@@ -201,11 +183,75 @@ def train_model(mlp, train_data, val_data, loss, acc, optimizer, epochs):  # Tra
     return train_losses, train_accs, val_losses, val_accs
 
 
+#   Exporting Functions
+class ExportModule(tf.Module):
+    def __init__(self, model, preprocess, class_pred):
+        super().__init__()
+        self.model = model
+        self.preprocess = preprocess
+        self.class_pred = class_pred
+
+    @tf.function(input_signature=[tf.TensorSpec(shape=[None, None, None, None], dtype=tf.uint8)])  # New Data
+    def __call__(self, x):
+        x = self.preprocess(x)
+        y = self.model(x)
+        y = self.class_pred(y)
+        return y
+
+
+def preprocess_test(x):  # Get Raw Data
+    x = tf.reshape(x, shape=[-1, 784])
+    x = x / 255
+    return x
+
+
+def class_predict(y):  # Predict
+    return tf.argmax(tf.nn.softmax(y), axis=1)
+
+
+def accuracy_score(y_pred, y):  # Compare and calc Accuracy
+    is_equal = tf.equal(y_pred, y)
+    return tf.reduce_mean(tf.cast(is_equal, tf.float32))
+
+
+# using preprocess funtion to flatten out data matrices
+train_data, val_data = train_data.map(preprocess), val_data.map(
+    preprocess)
+
+# Initialization of MLP
+hidden_layer_1_size = 700
+hidden_layer_2_size = 500
+output_size = 10
+mlp_model = MLP([
+    DenseLayer(out_dim=hidden_layer_1_size, activation=tf.nn.relu),
+    DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.relu),
+    DenseLayer(out_dim=output_size)])
+# Train Loop
 train_losses, train_accs, val_losses, val_accs = train_model(mlp_model, train_data, val_data,
                                                              loss=cross_entropy_loss, acc=accuracy,
-                                                             optimizer=Adam(), epochs=10)
+                                                             optimizer=Adam(), epochs=40)
+# Init Export Module
+mlp_model_export = ExportModule(model=mlp_model,
+                                preprocess=preprocess_test,
+                                class_pred=class_predict)
+# Export
+models = tempfile.mkdtemp()
+save_path = os.path.join(models, 'mlp_model_export')
+tf.saved_model.save(mlp_model_export, save_path)
 
-plot_metrics(train_losses, val_losses, "cross entropy loss")
-plot_metrics(train_accs, val_accs, "accuracy")
+# Load
+mlp_loaded = tf.saved_model.load(save_path)
+x_test, y_test = tfds.load("mnist", split=['test'], batch_size=-1, as_supervised=True)[0]
+test_classes = mlp_loaded(x_test)
+test_acc = accuracy_score(test_classes, y_test)
+print(f"Test Accuracy: {test_acc:.3f}")
+
+# plotting
+# plt.plot(reLU_ls, reLU)
+# plt.plot(softmax_ls, softmax)
+# plt.plot(sigmoid_ls, sigmoid)
+# plt.plot(tanh_ls, tanh)
+# plot_metrics(train_losses, val_losses, "cross entropy loss")
+# plot_metrics(train_accs, val_accs, "accuracy")
 
 plt.show()
