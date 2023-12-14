@@ -29,11 +29,6 @@ def omnidirectionalEdgeMap(image):
 matplotlib.rcParams['figure.figsize'] = [9, 6]
 tf.random.set_seed(42)
 
-# importiertes dataset
-train_data, val_data, test_data = tfds.load("mnist",
-                                            split=['train[10000:]', 'train[0:10000]', 'test'],
-                                            batch_size=128, as_supervised=True)
-
 
 def preprocess(x, y):  # function for flattening out feature matrix
     x = tf.reshape(x, shape=[-1, 784])
@@ -88,7 +83,16 @@ class DenseLayer(tf.Module):  # Function to initialize DenseLayer
         return self.activation(z)
 
 
-class MLP(tf.Module):  # Function to initialize MLP
+class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, x):
+
+        return x
+
+
+class CNN(tf.Module):  # Function to initialize MLP
     def __init__(self, layers):
         super().__init__()
         self.layers = layers
@@ -233,24 +237,30 @@ def accuracy_score(y_pred, y):  # Compare and calc Accuracy
     return tf.reduce_mean(tf.cast(is_equal, tf.float32))
 
 
+# importiertes dataset
+train_data, val_data, test_data = tfds.load("mnist",
+                                            split=['train[10000:]', 'train[0:10000]', 'test'],
+                                            batch_size=128, as_supervised=True)
+
 # using preprocess funtion to flatten out data matrices
 train_data, val_data = train_data.map(preprocess), val_data.map(
     preprocess)
 
-# Initialization of MLP
+# Initialization of CNN
 hidden_layer_1_size = 700
 hidden_layer_2_size = 500
 output_size = 10
-mlp_model = MLP([
+cnn_model = CNN([
+    ConvolutionLayer(),
     DenseLayer(out_dim=hidden_layer_1_size, activation=tf.nn.relu),
     DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.relu),
     DenseLayer(out_dim=output_size)])
 # Train Loop
-train_losses, train_accs, val_losses, val_accs = train_model(mlp_model, train_data, val_data,
+train_losses, train_accs, val_losses, val_accs = train_model(cnn_model, train_data, val_data,
                                                              loss=cross_entropy_loss, acc=accuracy,
                                                              optimizer=Adam(), epochs=7)
 # Init Export Module
-mlp_model_export = ExportModule(model=mlp_model,
+cnn_model_export = ExportModule(model=mlp_model,
                                 preprocess=preprocess_test,
                                 class_pred=class_predict)
 # Export
@@ -259,8 +269,9 @@ save_path = os.path.join(models, 'mlp_model_export')
 tf.saved_model.save(mlp_model_export, save_path)
 
 # Load
-mlp_loaded = tf.saved_model.load(save_path)
-x_test, y_test = tfds.load("mnist", split=['test'], batch_size=-1, as_supervised=True)[0]
+cnn_loaded = tf.saved_model.load(save_path)
+#x_test, y_test = tfds.load("mnist", split=['test'], batch_size=-1, as_supervised=True)[0]
+x_test, y_test = test_data[-1]
 test_classes = mlp_loaded(x_test)
 test_acc = accuracy_score(test_classes, y_test)
 print(f"Test Accuracy: {test_acc:.3f}")
