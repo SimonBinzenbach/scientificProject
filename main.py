@@ -30,6 +30,10 @@ matplotlib.rcParams['figure.figsize'] = [9, 6]
 tf.random.set_seed(42)
 
 
+def removeFilename(x, y, z):
+    return x, z
+
+
 def preprocess(x, y):  # function for flattening out feature matrix
     x = tf.reshape(x, shape=[-1, 784])
     x = x / 255
@@ -88,7 +92,6 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
         super().__init__()
 
     def __call__(self, x):
-
         return x
 
 
@@ -238,18 +241,16 @@ def accuracy_score(y_pred, y):  # Compare and calc Accuracy
 
 
 # importiertes dataset
-train_data, val_data, test_data = tfds.load("mnist",
-                                            split=['train[10000:]', 'train[0:10000]', 'test'],
+train_data, val_data, test_data = tfds.load("cats_vs_dogs",
+                                            split=['train[10000:20000]', 'train[0:10000]', 'train[20000:]'],
                                             batch_size=128, as_supervised=True)
 
-# using preprocess funtion to flatten out data matrices
-train_data, val_data = train_data.map(preprocess), val_data.map(
-    preprocess)
+train_data, val_data = train_data.map(removeFilename), val_data(removeFilename)
 
 # Initialization of CNN
 hidden_layer_1_size = 700
 hidden_layer_2_size = 500
-output_size = 10
+output_size = 2
 cnn_model = CNN([
     ConvolutionLayer(),
     DenseLayer(out_dim=hidden_layer_1_size, activation=tf.nn.relu),
@@ -270,7 +271,6 @@ tf.saved_model.save(mlp_model_export, save_path)
 
 # Load
 cnn_loaded = tf.saved_model.load(save_path)
-#x_test, y_test = tfds.load("mnist", split=['test'], batch_size=-1, as_supervised=True)[0]
 x_test, y_test = test_data[-1]
 test_classes = mlp_loaded(x_test)
 test_acc = accuracy_score(test_classes, y_test)
