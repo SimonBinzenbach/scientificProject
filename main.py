@@ -245,7 +245,7 @@ train_data, val_data, test_data = tfds.load("cats_vs_dogs",
                                             split=['train[10000:20000]', 'train[0:10000]', 'train[20000:]'],
                                             batch_size=128, as_supervised=True)
 
-train_data, val_data = train_data.map(removeFilename), val_data(removeFilename)
+train_data, val_data = train_data.map(removeFilename), val_data.map(removeFilename)
 
 # Initialization of CNN
 hidden_layer_1_size = 700
