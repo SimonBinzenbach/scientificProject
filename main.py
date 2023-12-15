@@ -8,57 +8,41 @@ import tempfile
 import os
 import tensorflow as tf
 import numpy as np
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
-# import tensorflow_datasets as tfds
+import tensorflow_datasets as tfds
 
-'''
-def omnidirectionalEdgeMapColor(image):
-    # creat a numpy array 400x400 of the name of "new_array"
-    new_tensor = np.zeros(dtype=float, shape=(400, 400))
-    # loop through the tensor
-    for x in range(0, new_tensor.shape[0]):
-        for y in range(0, new_tensor.shape[1]):
-            # get the color distance from x[i][j] to x[i][j+1] and put it into new_tensor
-            strongest_edge = float(0.0)
-            for sx in range(-1, 2):
-                for sy in range(-1, 2):
-                    if sx == 0 and sy == 0:
-                        continue
-                    if x + sx < 0 or x + sx >= new_tensor.shape[0] or y + sy < 0 or y + sy >= new_tensor.shape[1]:
-                        continue
-                    edge = float(math.sqrt(pow(image[x][y][0] - image[x + sx][y + sy][0], 2) + pow(
-                        image[x][y][1] - image[x + sx][y + sy][1], 2) + pow(image[x][y][2] - image[x + sx][y + sy][2],
-                                                                            2)))
-                    if edge > strongest_edge:
-                        strongest_edge = edge
-            # set new tensor at x y to strongest edge
-            new_tensor[x][y] = strongest_edge
-            new_tensor[x][y] /= math.sqrt(pow(256, 2) * 3)  # normalize
-            print("x: " + str(x) + " y: " + str(y) + " edge: " + str(new_tensor[x][y]))
-    return new_tensor
-'''
+
+def calculate_edge(x, y, image, height, width):
+    strongest_edge = 0.0
+    for sx in range(-1, 2):
+        for sy in range(-1, 2):
+            if sx == 0 and sy == 0:
+                continue
+
+            nx, ny = x + sx, y + sy
+            if 0 <= nx < height and 0 <= ny < width:
+                edge = np.linalg.norm(image[x, y] - image[nx, ny])
+                strongest_edge = max(strongest_edge, edge)
+
+    return x, y, strongest_edge / (math.sqrt(256**2 * 3))  # normalize
+
 def omnidirectionalEdgeMapColor(image):
     height, width, _ = image.shape
     new_tensor = np.zeros(shape=(height, width))
 
-    for x in range(height):
-        for y in range(width):
-            strongest_edge = 0.0
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for x in range(height):
+            for y in range(width):
+                futures.append(executor.submit(calculate_edge, x, y, image, height, width))
 
-            for sx in range(-1, 2):
-                for sy in range(-1, 2):
-                    if sx == 0 and sy == 0:
-                        continue
+        for future in futures:
+            x, y, edge_value = future.result()
+            new_tensor[x, y] = edge_value
+            if x % 100 == 0 and y % 100 == 0:
+                print(f"x: {x} y: {y} edge: {new_tensor[x, y]}")
 
-                    nx, ny = x + sx, y + sy
-                    if 0 <= nx < height and 0 <= ny < width:
-                        edge = np.linalg.norm(image[x, y] - image[nx, ny])
-                        strongest_edge = max(strongest_edge, edge)
-
-            new_tensor[x, y] = strongest_edge / (math.sqrt(256**2 * 3))  # normalize
-
-        print(f"x: {x} y: {y} edge: {new_tensor[x, y]}")
     return new_tensor
 
 
