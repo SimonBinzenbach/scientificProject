@@ -7,32 +7,68 @@ import seaborn as sns
 import tempfile
 import os
 import tensorflow as tf
-import tensorflow_datasets as tfds
+import numpy as np
+import concurrent.futures
 
+# import tensorflow_datasets as tfds
 
+'''
 def omnidirectionalEdgeMapColor(image):
-    # create a tensor of size of image width and height and 1 channels
-    new_tensor = tf.zeros((image.shape[0], image.shape[1], 1)) # shape 0 and 1 are width and height right? -O
+    # creat a numpy array 400x400 of the name of "new_array"
+    new_tensor = np.zeros(dtype=float, shape=(400, 400))
     # loop through the tensor
     for x in range(0, new_tensor.shape[0]):
         for y in range(0, new_tensor.shape[1]):
             # get the color distance from x[i][j] to x[i][j+1] and put it into new_tensor
-            strongestEdge = 0
+            strongest_edge = float(0.0)
             for sx in range(-1, 2):
                 for sy in range(-1, 2):
                     if sx == 0 and sy == 0:
                         continue
                     if x + sx < 0 or x + sx >= new_tensor.shape[0] or y + sy < 0 or y + sy >= new_tensor.shape[1]:
                         continue
-                    edge = math.sqrt(pow(image[0][x][y] - image[0][x + sx][y + sy], 2) + pow(image[1][x][y] - image[1][x + sx][y + sy], 2) + pow(image[2][x][y] - image[2][x + sx][y + sy], 2))
-                    if edge > strongestEdge:
-                        strongestEdge = edge
-            new_tensor[x][y][0] = strongestEdge
-            new_tensor[x][y][0] /= math.sqrt(pow(256,2)*3) # normalize
+                    edge = float(math.sqrt(pow(image[x][y][0] - image[x + sx][y + sy][0], 2) + pow(
+                        image[x][y][1] - image[x + sx][y + sy][1], 2) + pow(image[x][y][2] - image[x + sx][y + sy][2],
+                                                                            2)))
+                    if edge > strongest_edge:
+                        strongest_edge = edge
+            # set new tensor at x y to strongest edge
+            new_tensor[x][y] = strongest_edge
+            new_tensor[x][y] /= math.sqrt(pow(256, 2) * 3)  # normalize
+            print("x: " + str(x) + " y: " + str(y) + " edge: " + str(new_tensor[x][y]))
+    return new_tensor
+'''
+def omnidirectionalEdgeMapColor(image):
+    height, width, _ = image.shape
+    new_tensor = np.zeros(shape=(height, width))
+
+    for x in range(height):
+        for y in range(width):
+            strongest_edge = 0.0
+
+            for sx in range(-1, 2):
+                for sy in range(-1, 2):
+                    if sx == 0 and sy == 0:
+                        continue
+
+                    nx, ny = x + sx, y + sy
+                    if 0 <= nx < height and 0 <= ny < width:
+                        edge = np.linalg.norm(image[x, y] - image[nx, ny])
+                        strongest_edge = max(strongest_edge, edge)
+
+            new_tensor[x, y] = strongest_edge / (math.sqrt(256**2 * 3))  # normalize
+
+        print(f"x: {x} y: {y} edge: {new_tensor[x, y]}")
     return new_tensor
 
 
-
+myImage = tf.io.read_file("C:\\Users\Oliver\Pictures\cover8.jpg")
+myImage = tf.image.decode_image(myImage, dtype=tf.dtypes.float32, channels=3)
+myImage = tf.image.resize(myImage, [400, 400])
+myImage = omnidirectionalEdgeMapColor(myImage)
+# plot the image
+plt.imshow(myImage)
+plt.show()
 
 matplotlib.rcParams['figure.figsize'] = [9, 6]
 tf.random.set_seed(42)
@@ -101,6 +137,8 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
 
     def __call__(self, x):
         return omnidirectionalEdgeMapColor(x)
+
+
 class CNN(tf.Module):  # Function to initialize MLP
     def __init__(self, layers):
         super().__init__()
