@@ -74,6 +74,24 @@ matplotlib.rcParams['figure.figsize'] = [9, 6]
 tf.random.set_seed(42)
 
 
+def max_pooling(input_tensor):
+    input_height, input_width, input_channels = input_tensor.shape
+
+    output_height = input_height // 2
+    output_width = input_width // 2
+    output_channels = input_channels
+
+    output_tensor = tf.zeros((output_height, output_width, output_channels), dtype=tf.float32)
+
+    for y in range(0, input_height, 2):
+        for x in range(0, input_width, 2):
+            pool_region = input_tensor[y:y+2, x:x+2, :]
+            pooled_value = tf.reduce_max(pool_region, axis=(0, 1))
+            output_tensor[y//2, x//2, :] = pooled_value
+
+    return output_tensor
+
+
 def removeFilename(x, y, z):
     return x, z
 
