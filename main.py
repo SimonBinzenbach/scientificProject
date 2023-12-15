@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 import matplotlib
 from matplotlib import pyplot as plt
@@ -8,22 +10,28 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 
 
-def verticalEdgeMap(image):
-    # create a matrix of zeros with the size of the image
-    matrix = np.zeros((image.shape[0], image.shape[1]))
-    for x in range(0, image.shape[0]):
-        for y in range(0, image.shape[1] - 1):
-            matrix[x][y] = np.max(image[x, y]) - np.max(image[x, y + 1])
-    return matrix
+def omnidirectionalEdgeMapColor(image):
+    # create a tensor of size of image width and height and 1 channels
+    new_tensor = tf.zeros((image.shape[0], image.shape[1], 1)) # shape 0 and 1 are width and height right? -O
+    # loop through the tensor
+    for x in range(0, new_tensor.shape[0]):
+        for y in range(0, new_tensor.shape[1]):
+            # get the color distance from x[i][j] to x[i][j+1] and put it into new_tensor
+            strongestEdge = 0
+            for sx in range(-1, 2):
+                for sy in range(-1, 2):
+                    if sx == 0 and sy == 0:
+                        continue
+                    if x + sx < 0 or x + sx >= new_tensor.shape[0] or y + sy < 0 or y + sy >= new_tensor.shape[1]:
+                        continue
+                    edge = math.sqrt(pow(image[0][x][y] - image[0][x + sx][y + sy], 2) + pow(image[1][x][y] - image[1][x + sx][y + sy], 2) + pow(image[2][x][y] - image[2][x + sx][y + sy], 2))
+                    if edge > strongestEdge:
+                        strongestEdge = edge
+            new_tensor[x][y][0] = strongestEdge
+            new_tensor[x][y][0] /= math.sqrt(pow(256,2)*3) # normalize
+    return new_tensor
 
 
-def omnidirectionalEdgeMap(image):
-    # create a matrix of zeros with the size of the image
-    matrix = np.zeros((image.shape[0], image.shape[1]))
-    for x in range(0, image.shape[0] - 1):
-        for y in range(0, image.shape[1] - 1):
-            matrix[x][y] = abs(np.max(image[x, y]) - np.max(image[x + 1, y + 1]))
-    return matrix
 
 
 matplotlib.rcParams['figure.figsize'] = [9, 6]
@@ -92,9 +100,7 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
         super().__init__()
 
     def __call__(self, x):
-        return x
-
-
+        return omnidirectionalEdgeMapColor(x)
 class CNN(tf.Module):  # Function to initialize MLP
     def __init__(self, layers):
         super().__init__()
