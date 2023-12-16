@@ -220,9 +220,10 @@ def cross_entropy_loss(y_pred, y):  # cross entropy loss function
     return tf.reduce_mean(sparse_ce)
 
 
-def binary_cross_entropy(y_pred, y):
-    epsilon = 1e-7
-    return -tf.reduce_mean(y * tf.math.log(y_pred + epsilon) + (1 - y) * tf.math.log(1 - y_pred + epsilon))
+def binary_cross_entropy_loss(y_pred, y):
+    loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=y, logits=y_pred)
+    mean_loss = tf.reduce_mean(loss)
+    return mean_loss
 
 
 def accuracy(y_pred, y):  # accuracy function
