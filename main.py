@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import tensorflow_datasets as tfds
 
-
+print(tf.executing_eagerly())
 matplotlib.rcParams['figure.figsize'] = [9, 6]
 tf.random.set_seed(42)
 
@@ -122,7 +122,7 @@ class DenseLayer(tf.Module):  # Function to initialize DenseLayer
 
     def __call__(self, x):
         if not self.built:
-            self.in_dim = x.shape[1]
+            self.in_dim = x.shape[0]
             self.w = tf.Variable(self.weight_init(shape=(self.in_dim, self.out_dim)))
             self.b = tf.Variable(tf.zeros(shape=(self.out_dim,)))
             self.built = True
@@ -135,9 +135,13 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
         super().__init__()
 
     def __call__(self, x):
-        out_tensor = omnidirectionalEdgeMapColor(x)
-        out_tensor = max_pooling(out_tensor)
-        out_tensor = preprocess(out_tensor)
+        processed_images = []
+        for image in tf.unstack(x):
+            image = omnidirectionalEdgeMapColor(image)
+            image = max_pooling(image)
+            image = preprocess(image)
+            processed_images.append(image)
+        out_tensor = tf.stack(processed_images)
         return out_tensor
 
 
