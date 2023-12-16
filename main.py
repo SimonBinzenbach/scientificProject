@@ -77,10 +77,10 @@ def max_pooling(input_tensor):
     return output_tensor
 
 
-def preprocess(x, y):  # function for flattening out feature matrix
-    x = tf.reshape(x, shape=[-1, 784])
+def preprocess(x):  # function for flattening out feature matrix
+    x = tf.reshape(x, shape=[-1, 40000])
     x = x / 255
-    return x, y
+    return x
 
 
 # Activation Function showcases
@@ -135,7 +135,10 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
         super().__init__()
 
     def __call__(self, x):
-        return omnidirectionalEdgeMapColor(x)
+        out_tensor = omnidirectionalEdgeMapColor(x)
+        out_tensor = max_pooling(out_tensor)
+        out_tensor = preprocess(out_tensor)
+        return out_tensor
 
 
 class CNN(tf.Module):  # Function to initialize MLP
