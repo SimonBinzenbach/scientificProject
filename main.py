@@ -1,5 +1,4 @@
 import math
-
 import pandas as pd
 import matplotlib
 from matplotlib import pyplot as plt
@@ -9,10 +8,8 @@ import os
 import tensorflow as tf
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
-
 import tensorflow_datasets as tfds
 
-print(tf.executing_eagerly())
 matplotlib.rcParams['figure.figsize'] = [9, 6]
 tf.random.set_seed(42)
 
@@ -23,23 +20,35 @@ def xavier_init(shape):
     return tf.random.normal(shape, stddev=stddev)
 
 
-def batch_to_batch_edgemap(batch_of_images):
+def sobel_edge_detection(batch_images):
+
     target_height, target_width = 256, 256
-    resized_images = tf.image.resize(batch_of_images, size=(target_height, target_width))
+    batch_images = tf.image.resize(batch_images, size=(target_height, target_width))
+    batch_images_float = tf.cast(batch_images, tf.float32)
 
-    resized_images_float = tf.cast(resized_images, tf.float32) / 255.0
+    red_channel, green_channel, blue_channel = tf.split(batch_images_float, 3, axis=-1)
 
-    sobel_x = tf.constant([[1, 0, -1], [2, 0, -2], [1, 0, -1]], dtype=tf.float32)
-    sobel_y = tf.constant([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=tf.float32)
+    sobel_filter_x = tf.constant([[1, 0, -1], [2, 0, -2], [1, 0, -1]], dtype=tf.float32)
+    sobel_filter_y = tf.constant([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=tf.float32)
 
-    sobel_x = tf.expand_dims(tf.expand_dims(sobel_x, axis=-1), axis=-1)
-    sobel_y = tf.expand_dims(tf.expand_dims(sobel_y, axis=-1), axis=-1)
+    sobel_filter_x = tf.expand_dims(tf.expand_dims(sobel_filter_x, axis=-1), axis=-1)
+    sobel_filter_y = tf.expand_dims(tf.expand_dims(sobel_filter_y, axis=-1), axis=-1)
 
-    edges_x = tf.nn.conv2d(resized_images_float, sobel_x, strides=[1, 1, 1, 1], padding='SAME')
-    edges_y = tf.nn.conv2d(resized_images_float, sobel_y, strides=[1, 1, 1, 1], padding='SAME')
+    sobel_red_x = tf.nn.conv2d(red_channel, sobel_filter_x, strides=[1, 1, 1, 1], padding='SAME')
+    sobel_red_y = tf.nn.conv2d(red_channel, sobel_filter_y, strides=[1, 1, 1, 1], padding='SAME')
 
-    magnitude_edges = tf.sqrt(tf.square(edges_x) + tf.square(edges_y))
-    return magnitude_edges
+    sobel_green_x = tf.nn.conv2d(green_channel, sobel_filter_x, strides=[1, 1, 1, 1], padding='SAME')
+    sobel_green_y = tf.nn.conv2d(green_channel, sobel_filter_y, strides=[1, 1, 1, 1], padding='SAME')
+
+    sobel_blue_x = tf.nn.conv2d(blue_channel, sobel_filter_x, strides=[1, 1, 1, 1], padding='SAME')
+    sobel_blue_y = tf.nn.conv2d(blue_channel, sobel_filter_y, strides=[1, 1, 1, 1], padding='SAME')
+
+    sobel_gradient_x = tf.sqrt(tf.square(sobel_red_x) + tf.square(sobel_green_x) + tf.square(sobel_blue_x))
+    sobel_gradient_y = tf.sqrt(tf.square(sobel_red_y) + tf.square(sobel_green_y) + tf.square(sobel_blue_y))
+
+    sobel_gradient = tf.sqrt(tf.square(sobel_gradient_x) + tf.square(sobel_gradient_y))
+
+    return sobel_gradient
 
 
 # this can be done way smarter
@@ -81,27 +90,15 @@ def omnidirectionalEdgeMapColor(image):
 # for the love of god don't use this above it was just an experiment and it takes forever
 
 
-def max_pooling(input_tensor):
-    input_height, input_width, input_channels = input_tensor.shape
-
-    output_height = input_height // 2
-    output_width = input_width // 2
-    output_channels = input_channels
-
-    output_tensor = tf.zeros((output_height, output_width, output_channels), dtype=tf.float32)
-
-    for y in range(0, input_height, 2):
-        for x in range(0, input_width, 2):
-            pool_region = input_tensor[y:y+2, x:x+2, :]
-            pooled_value = tf.reduce_max(pool_region, axis=(0, 1))
-            output_tensor[y//2, x//2, :] = pooled_value
-
-    return output_tensor
+def max_pooling(input_tensor, pool_size=(2, 2), strides=(2, 2), padding='VALID'):
+    pooled_tensor = tf.nn.max_pool(input_tensor, ksize=(1, *pool_size, 1),
+                                   strides=(1, *strides, 1), padding=padding)
+    return pooled_tensor
 
 
-def preprocess(x):  # function for flattening out feature matrix
-    x = tf.reshape(x, shape=[-1, 40000])
-    x = x / 255
+def preprocess(x):  # function for normalizing and flattening out feature matrix
+    x = (x - tf.reduce_min(x)) / (tf.reduce_max(x) - tf.reduce_min(x))
+    x = tf.reshape(x, shape=[-1, 16384])   # image is 128 width and 128 height so multiplied we get 16.384
     return x
 
 
@@ -157,15 +154,11 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
         super().__init__()
 
     def __call__(self, x):
-        processed_images = []
-        # x = tf.image.sobel_edges(x)
-        x = batch_to_batch_edgemap(x)
-        for image in tf.unstack(x):
-            image = max_pooling(image)
-            image = preprocess(image)
-            processed_images.append(image)
-        out_tensor = tf.stack(processed_images)
-        return out_tensor
+        x = sobel_edge_detection(x)
+        x = max_pooling(x)
+        x = preprocess(x)
+        print(x.shape)
+        return x
 
 
 class CNN(tf.Module):  # Function to initialize MLP
@@ -325,8 +318,8 @@ train_data, val_data, test_data = tfds.load("cats_vs_dogs",
 
 
 # Initialization of CNN
-hidden_layer_1_size = 700
-hidden_layer_2_size = 500
+hidden_layer_1_size = 2084  # need to be products of the input tensor
+hidden_layer_2_size = 1.563
 output_size = 2
 cnn_model = CNN([
     ConvolutionLayer(),
