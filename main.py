@@ -141,7 +141,7 @@ class DenseLayer(tf.Module):  # Function to initialize DenseLayer
 
     def __call__(self, x):
         if not self.built:
-            self.in_dim = x.shape[0]
+            self.in_dim = x.shape[1]
             self.w = tf.Variable(self.weight_init(shape=(self.in_dim, self.out_dim)))
             self.b = tf.Variable(tf.zeros(shape=(self.out_dim,)))
             self.built = True
@@ -157,7 +157,6 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
         x = sobel_edge_detection(x)
         x = max_pooling(x)
         x = preprocess(x)
-        print(x.shape)
         return x
 
 
@@ -318,8 +317,8 @@ train_data, val_data, test_data = tfds.load("cats_vs_dogs",
 
 
 # Initialization of CNN
-hidden_layer_1_size = 2084  # need to be products of the input tensor
-hidden_layer_2_size = 1.563
+hidden_layer_1_size = 700  # need to be products of the input tensor
+hidden_layer_2_size = 500
 output_size = 2
 cnn_model = CNN([
     ConvolutionLayer(),
@@ -328,7 +327,7 @@ cnn_model = CNN([
     DenseLayer(out_dim=output_size)])
 # Train Loop
 train_losses, train_accs, val_losses, val_accs = train_model(cnn_model, train_data, val_data,
-                                                             loss=binary_cross_entropy, acc=accuracy,
+                                                             loss=cross_entropy_loss, acc=accuracy,
                                                              optimizer=Adam(), epochs=3)
 
 
