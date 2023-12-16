@@ -332,27 +332,29 @@ train_losses, train_accs, val_losses, val_accs = train_model(cnn_model, train_da
 
 
 # Init Export Module
-cnn_model_export = ExportModule(model=mlp_model,
+cnn_model_export = ExportModule(model=cnn_model,
                                 preprocess=preprocess_test,
                                 class_pred=class_predict)
+'''
 # Export
 models = tempfile.mkdtemp()
 save_path = os.path.join(models, 'mlp_model_export')
-tf.saved_model.save(mlp_model_export, save_path)
+tf.saved_model.save(cnn_model_export, save_path)
 
 # Load
 cnn_loaded = tf.saved_model.load(save_path)
-x_test, y_test = test_data[-1]
-test_classes = mlp_loaded(x_test)
+
+x_test, y_test = test_data[0]
+test_classes = cnn_loaded(x_test)
 test_acc = accuracy_score(test_classes, y_test)
 print(f"Test Accuracy: {test_acc:.3f}")
-
+'''
 # plotting
 # plt.plot(reLU_ls, reLU)
 # plt.plot(softmax_ls, softmax)
 # plt.plot(sigmoid_ls, sigmoid)
 # plt.plot(tanh_ls, tanh)
-# plot_metrics(train_losses, val_losses, "cross entropy loss")
-# plot_metrics(train_accs, val_accs, "accuracy")
+plot_metrics(train_losses, val_losses, "cross entropy loss")
+plot_metrics(train_accs, val_accs, "accuracy")
 
 plt.show()
