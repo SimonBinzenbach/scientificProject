@@ -13,6 +13,10 @@ from concurrent.futures import ThreadPoolExecutor
 import tensorflow_datasets as tfds
 
 
+matplotlib.rcParams['figure.figsize'] = [9, 6]
+tf.random.set_seed(42)
+
+
 def calculate_edge(x, y, image, height, width):
     strongest_edge = 0.0
     for sx in range(-1, 2):
@@ -28,7 +32,9 @@ def calculate_edge(x, y, image, height, width):
     return x, y, strongest_edge / (math.sqrt(256**2 * 3))  # normalize
 
 def omnidirectionalEdgeMapColor(image):
-    height, width, _ = image.shape
+
+    width = image.shape[0]
+    height = image.shape[1]
     new_tensor = np.zeros(shape=(height, width))
 
     with ThreadPoolExecutor() as executor:
@@ -44,18 +50,6 @@ def omnidirectionalEdgeMapColor(image):
                 print(f"x: {x} y: {y} edge: {new_tensor[x, y]}")
 
     return new_tensor
-
-
-myImage = tf.io.read_file("C:\\Users\Oliver\Pictures\cover8.jpg")
-myImage = tf.image.decode_image(myImage, dtype=tf.dtypes.float32, channels=3)
-myImage = tf.image.resize(myImage, [400, 400])
-myImage = omnidirectionalEdgeMapColor(myImage)
-# plot the image
-plt.imshow(myImage)
-plt.show()
-
-matplotlib.rcParams['figure.figsize'] = [9, 6]
-tf.random.set_seed(42)
 
 
 def max_pooling(input_tensor):
@@ -74,10 +68,6 @@ def max_pooling(input_tensor):
             output_tensor[y//2, x//2, :] = pooled_value
 
     return output_tensor
-
-
-def removeFilename(x, y, z):
-    return x, z
 
 
 def preprocess(x, y):  # function for flattening out feature matrix
@@ -291,7 +281,18 @@ train_data, val_data, test_data = tfds.load("cats_vs_dogs",
                                             split=['train[10000:20000]', 'train[0:10000]', 'train[20000:]'],
                                             batch_size=128, as_supervised=True)
 
-train_data, val_data = train_data.map(removeFilename), val_data.map(removeFilename)
+myImage = tf.zeros([780, 1200, 3], 'uint8', 'maul')
+for x, y in train_data:
+    myImage = x
+    break
+
+print(myImage.shape)
+myImage = tf.image.resize(myImage, [400, 400])
+myImage = omnidirectionalEdgeMapColor(myImage)
+# plot the image
+plt.imshow(myImage)
+plt.show()
+
 
 # Initialization of CNN
 hidden_layer_1_size = 700
@@ -306,6 +307,8 @@ cnn_model = CNN([
 train_losses, train_accs, val_losses, val_accs = train_model(cnn_model, train_data, val_data,
                                                              loss=cross_entropy_loss, acc=accuracy,
                                                              optimizer=Adam(), epochs=7)
+
+
 # Init Export Module
 cnn_model_export = ExportModule(model=mlp_model,
                                 preprocess=preprocess_test,
