@@ -22,6 +22,26 @@ def xavier_init(shape):
     stddev = tf.sqrt(2. / (shape[0] + shape[1]))
     return tf.random.normal(shape, stddev=stddev)
 
+
+def batch_to_batch_edgemap(batch_of_images):
+    target_height, target_width = 256, 256
+    resized_images = tf.image.resize(batch_of_images, size=(target_height, target_width))
+
+    resized_images_float = tf.cast(resized_images, tf.float32) / 255.0
+
+    sobel_x = tf.constant([[1, 0, -1], [2, 0, -2], [1, 0, -1]], dtype=tf.float32)
+    sobel_y = tf.constant([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=tf.float32)
+
+    sobel_x = tf.expand_dims(tf.expand_dims(sobel_x, axis=-1), axis=-1)
+    sobel_y = tf.expand_dims(tf.expand_dims(sobel_y, axis=-1), axis=-1)
+
+    edges_x = tf.nn.conv2d(resized_images_float, sobel_x, strides=[1, 1, 1, 1], padding='SAME')
+    edges_y = tf.nn.conv2d(resized_images_float, sobel_y, strides=[1, 1, 1, 1], padding='SAME')
+
+    magnitude_edges = tf.sqrt(tf.square(edges_x) + tf.square(edges_y))
+    return magnitude_edges
+
+
 # this can be done way smarter
 def calculate_edge(x, y, image, height, width):
     strongest_edge = 0.0
@@ -36,6 +56,7 @@ def calculate_edge(x, y, image, height, width):
                 strongest_edge = max(strongest_edge, edge)
 
     return x, y, strongest_edge / (math.sqrt(256**2 * 3))  # normalize
+
 
 # pls don't use this
 def omnidirectionalEdgeMapColor(image):
@@ -137,8 +158,9 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
 
     def __call__(self, x):
         processed_images = []
+        # x = tf.image.sobel_edges(x)
+        x = batch_to_batch_edgemap(x)
         for image in tf.unstack(x):
-            image = tf.image.sobel_edges(image)
             image = max_pooling(image)
             image = preprocess(image)
             processed_images.append(image)
