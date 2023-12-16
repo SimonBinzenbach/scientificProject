@@ -138,7 +138,7 @@ class ConvolutionLayer(tf.Module):  # Function to initialize DenseLayer
     def __call__(self, x):
         processed_images = []
         for image in tf.unstack(x):
-            image = omnidirectionalEdgeMapColor(image)
+            image = tf.image.sobel_edges(image)
             image = max_pooling(image)
             image = preprocess(image)
             processed_images.append(image)
