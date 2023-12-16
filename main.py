@@ -22,7 +22,7 @@ def xavier_init(shape):
     stddev = tf.sqrt(2. / (shape[0] + shape[1]))
     return tf.random.normal(shape, stddev=stddev)
 
-
+# this can be done way smarter
 def calculate_edge(x, y, image, height, width):
     strongest_edge = 0.0
     for sx in range(-1, 2):
@@ -37,7 +37,7 @@ def calculate_edge(x, y, image, height, width):
 
     return x, y, strongest_edge / (math.sqrt(256**2 * 3))  # normalize
 
-
+# pls don't use this
 def omnidirectionalEdgeMapColor(image):
 
     width = image.shape[0]
@@ -57,6 +57,7 @@ def omnidirectionalEdgeMapColor(image):
                 print(f"x: {x} y: {y} edge: {new_tensor[x, y]}")
 
     return new_tensor
+# for the love of god don't use this above it was just an experiment and it takes forever
 
 
 def max_pooling(input_tensor):
