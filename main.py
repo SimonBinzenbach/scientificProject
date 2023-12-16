@@ -17,6 +17,12 @@ matplotlib.rcParams['figure.figsize'] = [9, 6]
 tf.random.set_seed(42)
 
 
+def xavier_init(shape):
+    in_dim, out_dim = shape
+    stddev = tf.sqrt(2. / (shape[0] + shape[1]))
+    return tf.random.normal(shape, stddev=stddev)
+
+
 def calculate_edge(x, y, image, height, width):
     strongest_edge = 0.0
     for sx in range(-1, 2):
@@ -30,6 +36,7 @@ def calculate_edge(x, y, image, height, width):
                 strongest_edge = max(strongest_edge, edge)
 
     return x, y, strongest_edge / (math.sqrt(256**2 * 3))  # normalize
+
 
 def omnidirectionalEdgeMapColor(image):
 
@@ -106,7 +113,7 @@ def plot_metrics(train_metric, val_metric, metric_type):  # Visualize metrics vs
 
 # MLP Initialization stuff
 class DenseLayer(tf.Module):  # Function to initialize DenseLayer
-    def __init__(self, out_dim, weight_init=tf.keras.initializers.GlorotUniform(), activation=tf.identity):
+    def __init__(self, out_dim, weight_init=xavier_init, activation=tf.identity):
         super().__init__()
         self.out_dim = out_dim
         self.weight_init = weight_init
@@ -189,6 +196,11 @@ class Adam(tf.Module):  # Adaptive moment estimation
 def cross_entropy_loss(y_pred, y):  # cross entropy loss function
     sparse_ce = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_pred)
     return tf.reduce_mean(sparse_ce)
+
+
+def binary_cross_entropy(y_pred, y):
+    epsilon = 1e-7
+    return -tf.reduce_mean(y * tf.math.log(y_pred + epsilon) + (1 - y) * tf.math.log(1 - y_pred + epsilon))
 
 
 def accuracy(y_pred, y):  # accuracy function
@@ -281,18 +293,6 @@ train_data, val_data, test_data = tfds.load("cats_vs_dogs",
                                             split=['train[10000:20000]', 'train[0:10000]', 'train[20000:]'],
                                             batch_size=128, as_supervised=True)
 
-myImage = tf.zeros([780, 1200, 3], 'uint8', 'maul')
-for x, y in train_data:
-    myImage = x
-    break
-
-print(myImage.shape)
-myImage = tf.image.resize(myImage, [400, 400])
-myImage = omnidirectionalEdgeMapColor(myImage)
-# plot the image
-plt.imshow(myImage)
-plt.show()
-
 
 # Initialization of CNN
 hidden_layer_1_size = 700
@@ -301,12 +301,12 @@ output_size = 2
 cnn_model = CNN([
     ConvolutionLayer(),
     DenseLayer(out_dim=hidden_layer_1_size, activation=tf.nn.relu),
-    DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.relu),
+    DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.sigmoid),
     DenseLayer(out_dim=output_size)])
 # Train Loop
 train_losses, train_accs, val_losses, val_accs = train_model(cnn_model, train_data, val_data,
-                                                             loss=cross_entropy_loss, acc=accuracy,
-                                                             optimizer=Adam(), epochs=7)
+                                                             loss=binary_cross_entropy, acc=accuracy,
+                                                             optimizer=Adam(), epochs=3)
 
 
 # Init Export Module
