@@ -102,6 +102,10 @@ def preprocess(x):  # function for normalizing and flattening out feature matrix
     return x
 
 
+def blankpreprocess(x): # Export Module requests a preprocessing function but our preprocessing is done in the
+    return x            # Convolution layer, so we need a blank preprocess function to pass
+
+
 # Activation Function showcases
 reLU_ls = tf.linspace(-2, 2, 15)  # ReLU(X)
 reLU_ls = tf.cast(reLU_ls, tf.float32)
@@ -303,7 +307,7 @@ def preprocess_test(x):  # Get Raw Data
 
 
 def class_predict(y):  # Predict
-    return tf.argmax(tf.nn.softmax(y), axis=1)
+    return tf.argmax(tf.nn.sigmoid(y), axis=1)
 
 
 def accuracy_score(y_pred, y):  # Compare and calc Accuracy
@@ -320,36 +324,44 @@ train_data, val_data, test_data = tfds.load("cats_vs_dogs",
 # Initialization of CNN
 hidden_layer_1_size = 700  # need to be products of the input tensor
 hidden_layer_2_size = 500
+hidden_layer_3_size = 200
 output_size = 2
 cnn_model = CNN([
     ConvolutionLayer(),
     DenseLayer(out_dim=hidden_layer_1_size, activation=tf.nn.relu),
-    DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.sigmoid),
+    DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.relu),
+    DenseLayer(out_dim=hidden_layer_3_size, activation=tf.nn.sigmoid),
     DenseLayer(out_dim=output_size)])
 # Train Loop
 train_losses, train_accs, val_losses, val_accs = train_model(cnn_model, train_data, val_data,
                                                              loss=cross_entropy_loss, acc=accuracy,
-                                                             optimizer=Adam(), epochs=3)
+                                                             optimizer=Adam(), epochs=10)
 
 
 # Init Export Module
 cnn_model_export = ExportModule(model=cnn_model,
-                                preprocess=preprocess_test,
+                                preprocess=blankpreprocess,
                                 class_pred=class_predict)
-'''
+
 # Export
 models = tempfile.mkdtemp()
-save_path = os.path.join(models, 'mlp_model_export')
+save_path = os.path.join(models, 'cnn_model_export')
 tf.saved_model.save(cnn_model_export, save_path)
 
 # Load
 cnn_loaded = tf.saved_model.load(save_path)
 
-x_test, y_test = test_data[0]
+x_test = 0
+y_test = 0
+for x, y in test_data:  # I have no clue how to get it otherwise we call this technique the forbidden for loop
+    x_test = x
+    y_test = y
+    break
+
 test_classes = cnn_loaded(x_test)
 test_acc = accuracy_score(test_classes, y_test)
 print(f"Test Accuracy: {test_acc:.3f}")
-'''
+
 # plotting
 # plt.plot(reLU_ls, reLU)
 # plt.plot(softmax_ls, softmax)
@@ -359,3 +371,4 @@ plot_metrics(train_losses, val_losses, "cross entropy loss")
 plot_metrics(train_accs, val_accs, "accuracy")
 
 plt.show()
+print('executed')
