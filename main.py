@@ -321,8 +321,8 @@ train_data, val_data, test_data = tfds.load("cats_vs_dogs",
                                             batch_size=128, as_supervised=True)
 
 
-# Initialization of CNN
-hidden_layer_1_size = 700  # need to be products of the input tensor
+# Initialization of CNN -> adjust model structure here
+hidden_layer_1_size = 700
 hidden_layer_2_size = 500
 hidden_layer_3_size = 200
 output_size = 2
@@ -332,7 +332,7 @@ cnn_model = CNN([
     DenseLayer(out_dim=hidden_layer_2_size, activation=tf.nn.relu),
     DenseLayer(out_dim=hidden_layer_3_size, activation=tf.nn.sigmoid),
     DenseLayer(out_dim=output_size)])
-# Train Loop
+# Train Loop -> adjust epochs loss, accuracy and optimizer functions here
 train_losses, train_accs, val_losses, val_accs = train_model(cnn_model, train_data, val_data,
                                                              loss=cross_entropy_loss, acc=accuracy,
                                                              optimizer=Adam(), epochs=10)
@@ -367,8 +367,8 @@ print(f"Test Accuracy: {test_acc:.3f}")
 # plt.plot(softmax_ls, softmax)
 # plt.plot(sigmoid_ls, sigmoid)
 # plt.plot(tanh_ls, tanh)
-plot_metrics(train_losses, val_losses, "cross entropy loss")
-plot_metrics(train_accs, val_accs, "accuracy")
+# plot_metrics(train_losses, val_losses, "cross entropy loss")
+# plot_metrics(train_accs, val_accs, "accuracy")
 
 plt.show()
 print('executed')
